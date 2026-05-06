@@ -12,7 +12,7 @@ SELECT * FROM Users WHERE role = 'donor';
 SELECT * FROM Users WHERE role = 'receiver';
  
 -- SELECT: Login check (used in login.php)
-SELECT * FROM Users WHERE email = 'rahim@gmail.com' AND password = MD5('rahim123');
+SELECT * FROM Users WHERE email = ? AND password = ?
  
 -- SELECT: Find user by ID
 SELECT * FROM Users WHERE user_id = 1;
@@ -24,7 +24,7 @@ SELECT role, COUNT(*) AS total FROM Users GROUP BY role;
 SELECT * FROM Users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY);
  
 -- UPDATE: Change user password
-UPDATE Users SET password = MD5('newpassword') WHERE user_id = 2;
+UPDATE Users SET password = 'hashed_value_here' WHERE user_id = 2;
  
 -- UPDATE: Change user role
 UPDATE Users SET role = 'admin' WHERE user_id = 3;
