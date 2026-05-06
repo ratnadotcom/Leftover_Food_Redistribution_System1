@@ -1,0 +1,15 @@
+CREATE DATABASE IF NOT EXISTS leftover_food_db
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+ 
+USE leftover_food_db;
+ -- TABLE 1: USERS
+CREATE TABLE Users (
+    user_id         INT PRIMARY KEY AUTO_INCREMENT,
+    name            VARCHAR(100) NOT NULL,
+    email           VARCHAR(100) NOT NULL UNIQUE,
+    password        VARCHAR(255) NOT NULL,
+    role            ENUM('admin','donor','receiver') NOT NULL DEFAULT 'donor',
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+ 
