@@ -1,0 +1,33 @@
+-- INSERT: Register a new user
+INSERT INTO Users (name, email, password, role)
+VALUES ('Rahim Donor', 'rahim@gmail.com', MD5('rahim123'), 'donor');
+ 
+-- SELECT: Get all users
+SELECT * FROM Users;
+ 
+-- SELECT: Get all donors only
+SELECT * FROM Users WHERE role = 'donor';
+ 
+-- SELECT: Get all receivers only
+SELECT * FROM Users WHERE role = 'receiver';
+ 
+-- SELECT: Login check (used in login.php)
+SELECT * FROM Users WHERE email = 'rahim@gmail.com' AND password = MD5('rahim123');
+ 
+-- SELECT: Find user by ID
+SELECT * FROM Users WHERE user_id = 1;
+ 
+-- SELECT: Count total users by role
+SELECT role, COUNT(*) AS total FROM Users GROUP BY role;
+ 
+-- SELECT: Users registered in last 7 days
+SELECT * FROM Users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY);
+ 
+-- UPDATE: Change user password
+UPDATE Users SET password = MD5('newpassword') WHERE user_id = 2;
+ 
+-- UPDATE: Change user role
+UPDATE Users SET role = 'admin' WHERE user_id = 3;
+ 
+-- DELETE: Remove a user account
+DELETE FROM Users WHERE user_id = 5;
