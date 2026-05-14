@@ -8,3 +8,13 @@ CREATE TABLE Requests (
     FOREIGN KEY (receiver_id) REFERENCES Receivers(receiver_id) ON DELETE CASCADE,
     FOREIGN KEY (food_id)     REFERENCES Food_Items(food_id)    ON DELETE CASCADE
 );
+
+ALTER TABLE requests
+ADD requested_quantity INT NOT NULL;
+ALTER TABLE requests
+MODIFY status ENUM(
+'pending',
+'assigned',
+'completed',
+'cancelled'
+);
