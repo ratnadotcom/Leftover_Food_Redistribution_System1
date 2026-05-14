@@ -1,0 +1,542 @@
+```php id="6mv9x2"
+<?php
+// admin/dashboard.php
+
+require_once '../includes/config.php';
+
+requireRole('admin');
+
+// =============================
+// STATISTICS
+// =============================
+
+// Total Users
+
+$total_users = mysqli_num_rows(
+mysqli_query($conn,
+"SELECT * FROM users")
+);
+
+// Donors
+
+$total_donors = mysqli_num_rows(
+mysqli_query($conn,
+"SELECT * FROM users
+WHERE role='donor'")
+);
+
+// Receivers
+
+$total_receivers = mysqli_num_rows(
+mysqli_query($conn,
+"SELECT * FROM users
+WHERE role='receiver'")
+);
+
+// Delivery Staff
+
+$total_delivery = mysqli_num_rows(
+mysqli_query($conn,
+"SELECT * FROM users
+WHERE role='delivery'")
+);
+
+// Food Items
+
+$total_food = mysqli_num_rows(
+mysqli_query($conn,
+"SELECT * FROM food")
+);
+
+// Pending Requests
+
+$pending_requests = mysqli_num_rows(
+mysqli_query($conn,
+"SELECT * FROM requests
+WHERE status='pending'")
+);
+
+// Active Deliveries
+
+$active_delivery = mysqli_num_rows(
+mysqli_query($conn,
+"SELECT * FROM deliveries
+WHERE status='assigned'
+OR status='picked_up'")
+);
+
+// Completed Deliveries
+
+$completed_delivery = mysqli_num_rows(
+mysqli_query($conn,
+"SELECT * FROM deliveries
+WHERE status='delivered'")
+);
+
+// =============================
+// RECENT DELIVERIES
+// =============================
+
+$recent_deliveries = mysqli_query($conn,
+
+"SELECT deliveries.*,
+
+receiver.name AS receiver_name,
+
+delivery_user.name AS delivery_name,
+
+food.food_name,
+
+requests.status AS request_status
+
+FROM deliveries
+
+JOIN requests
+ON deliveries.request_id = requests.request_id
+
+JOIN food
+ON requests.food_id = food.id
+
+JOIN users AS receiver
+ON requests.receiver_id = receiver.id
+
+JOIN users AS delivery_user
+ON deliveries.delivery_user_id = delivery_user.id
+
+ORDER BY deliveries.delivery_id DESC
+
+LIMIT 5");
+
+?>
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Admin Dashboard</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+rel="stylesheet">
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+rel="stylesheet">
+
+<link href="../css/style.css"
+rel="stylesheet">
+
+</head>
+
+<body>
+
+<?php include '../includes/navbar.php'; ?>
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+    <a href="dashboard.php"
+    class="nav-link active">
+
+        <i class="fas fa-tachometer-alt"></i>
+        Dashboard
+
+    </a>
+
+    <a href="users.php"
+    class="nav-link">
+
+        <i class="fas fa-users"></i>
+        Users
+
+    </a>
+
+    <a href="food.php"
+    class="nav-link">
+
+        <i class="fas fa-utensils"></i>
+        Food Items
+
+    </a>
+
+    <a href="requests.php"
+    class="nav-link">
+
+        <i class="fas fa-inbox"></i>
+        Requests
+
+    </a>
+
+    <a href="delivery.php"
+    class="nav-link">
+
+        <i class="fas fa-truck"></i>
+        Deliveries
+
+    </a>
+
+</div>
+
+<!-- MAIN CONTENT -->
+
+<div class="main-content">
+
+    <!-- HEADER -->
+
+    <div class="page-header mb-4">
+
+        <h2>
+
+            <i class="fas fa-chart-line me-2"
+            style="color:var(--primary)"></i>
+
+            Admin Dashboard
+
+        </h2>
+
+    </div>
+
+    <!-- SUMMARY CARDS -->
+
+    <div class="row g-4">
+
+        <!-- USERS -->
+
+        <div class="col-md-3">
+
+            <div class="card dashboard-card shadow-sm">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+
+                            <h6>Total Users</h6>
+
+                            <h3><?= $total_users ?></h3>
+
+                        </div>
+
+                        <i class="fas fa-users fa-2x text-primary"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- DONORS -->
+
+        <div class="col-md-3">
+
+            <div class="card dashboard-card shadow-sm">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+
+                            <h6>Donors</h6>
+
+                            <h3><?= $total_donors ?></h3>
+
+                        </div>
+
+                        <i class="fas fa-hand-holding-heart fa-2x text-success"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- RECEIVERS -->
+
+        <div class="col-md-3">
+
+            <div class="card dashboard-card shadow-sm">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+
+                            <h6>Receivers</h6>
+
+                            <h3><?= $total_receivers ?></h3>
+
+                        </div>
+
+                        <i class="fas fa-people-carry fa-2x text-info"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- DELIVERY -->
+
+        <div class="col-md-3">
+
+            <div class="card dashboard-card shadow-sm">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+
+                            <h6>Delivery Staff</h6>
+
+                            <h3><?= $total_delivery ?></h3>
+
+                        </div>
+
+                        <i class="fas fa-truck fa-2x text-warning"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- FOOD -->
+
+        <div class="col-md-3">
+
+            <div class="card dashboard-card shadow-sm">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+
+                            <h6>Total Food</h6>
+
+                            <h3><?= $total_food ?></h3>
+
+                        </div>
+
+                        <i class="fas fa-utensils fa-2x text-danger"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- PENDING -->
+
+        <div class="col-md-3">
+
+            <div class="card dashboard-card shadow-sm">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+
+                            <h6>Pending Requests</h6>
+
+                            <h3><?= $pending_requests ?></h3>
+
+                        </div>
+
+                        <i class="fas fa-clock fa-2x text-secondary"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ACTIVE DELIVERY -->
+
+        <div class="col-md-3">
+
+            <div class="card dashboard-card shadow-sm">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+
+                            <h6>Active Deliveries</h6>
+
+                            <h3><?= $active_delivery ?></h3>
+
+                        </div>
+
+                        <i class="fas fa-shipping-fast fa-2x text-primary"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- COMPLETED -->
+
+        <div class="col-md-3">
+
+            <div class="card dashboard-card shadow-sm">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+
+                            <h6>Completed Deliveries</h6>
+
+                            <h3><?= $completed_delivery ?></h3>
+
+                        </div>
+
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- RECENT DELIVERIES -->
+
+    <div class="card mt-5">
+
+        <div class="card-header bg-white">
+
+            <h5 class="mb-0">
+
+                <i class="fas fa-truck me-2"></i>
+
+                Recent Deliveries
+
+            </h5>
+
+        </div>
+
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover mb-0">
+
+                    <thead>
+
+                    <tr>
+
+                        <th>#</th>
+                        <th>Receiver</th>
+                        <th>Delivery Person</th>
+                        <th>Food</th>
+                        <th>Status</th>
+
+                    </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                    <?php $serial = 1; ?>
+
+                    <?php while($d = mysqli_fetch_assoc($recent_deliveries)): ?>
+
+                    <tr>
+
+                        <td><?= $serial++ ?></td>
+
+                        <td><?= htmlspecialchars($d['receiver_name']) ?></td>
+
+                        <td><?= htmlspecialchars($d['delivery_name']) ?></td>
+
+                        <td><?= htmlspecialchars($d['food_name']) ?></td>
+
+                        <td>
+
+                            <?php
+
+                            if($d['status'] == 'assigned'){
+
+                                echo "<span class='badge bg-primary'>
+                                Assigned
+                                </span>";
+
+                            }elseif($d['status'] == 'picked_up'){
+
+                                echo "<span class='badge bg-warning text-dark'>
+                                Picked Up
+                                </span>";
+
+                            }elseif($d['status'] == 'delivered'){
+
+                                echo "<span class='badge bg-success'>
+                                Delivered
+                                </span>";
+
+                            }elseif($d['status'] == 'cancelled'){
+
+                                echo "<span class='badge bg-danger'>
+                                Cancelled
+                                </span>";
+
+                            }
+
+                            ?>
+
+                        </td>
+
+                    </tr>
+
+                    <?php endwhile; ?>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+
+</html>
+```
