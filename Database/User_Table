@@ -13,3 +13,11 @@ CREATE TABLE Users (
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
 );
  
+
+ALTER TABLE users
+MODIFY COLUMN role ENUM(
+    'admin',
+    'donor',
+    'receiver',
+    'delivery'
+) NOT NULL DEFAULT 'donor';
