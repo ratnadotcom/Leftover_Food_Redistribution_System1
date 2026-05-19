@@ -9,3 +9,8 @@ CREATE TABLE requests (
     FOREIGN KEY (food_id)     REFERENCES food(id) ON DELETE CASCADE,
     FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+INSERT INTO requests (food_id, receiver_id, quantity, message, status) VALUES
+(1, 4, 20, 'We need food for 20 families tonight.', 'approved'),
+(3, 5, 5,  'For my neighbourhood.', 'pending');
+
