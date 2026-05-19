@@ -1,50 +1,96 @@
 <?php
-require_once 'session_check.php';
-require_once 'db_config.php';
-if(is_logged_in()){ redirect_by_role(); }
+// login.php — User Login
+require_once 'includes/config.php';
 
-$err=''; $email='';
-if(!isset($_SESSION['attempts'])){ $_SESSION['attempts']=0; $_SESSION['last_try']=time(); }
-$locked=($_SESSION['attempts']>=5 && time()-$_SESSION['last_try']<300);
+// Already logged in? redirect to dashboard
+if (isset($_SESSION['user_id'])) {
+    redirect('/food_system/' . $_SESSION['role'] . '/dashboard.php');
+}
 
-if($_SERVER['REQUEST_METHOD']==='POST' && !$locked){
-    $email = trim($_POST['email']??'');
-    $pass  = $_POST['password']??'';
-    if(!$email||!$pass){
-        $err="Email and password required.";
+$error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email    = clean($conn, $_POST['email']);
+    $password = $_POST['password'];
+
+    if (empty($email) || empty($password)) {
+        $error = 'Please fill in all fields.';
     } else {
-        $s=$conn->prepare("SELECT user_id,name,email,password,role FROM Users WHERE email=? LIMIT 1");
-        $s->bind_param("s",$email); $s->execute();
-        $row=$s->get_result()->fetch_assoc(); $s->close();
-        if($row && password_verify($pass,$row['password'])){
-            $_SESSION['attempts']=0;
-            session_regenerate_id(true);
-            $_SESSION['user_id']=$row['user_id']; $_SESSION['user_name']=$row['name'];
-            $_SESSION['user_email']=$row['email']; $_SESSION['user_role']=$row['role'];
-            $_SESSION['logged_in']=true; $_SESSION['login_time']=time();
-            redirect_by_role();
+        $sql  = "SELECT * FROM users WHERE email = '$email' LIMIT 1";
+        $res  = mysqli_query($conn, $sql);
+        $user = mysqli_fetch_assoc($res);
+
+        if ($user && password_verify($password, $user['password'])) {
+            // Set session
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['name']    = $user['name'];
+            $_SESSION['role']    = $user['role'];
+            $_SESSION['email']   = $user['email'];
+
+            // Role-based redirect
+            redirect('/food_system/' . $user['role'] . '/dashboard.php');
         } else {
-            $err="Invalid email or password.";
-            $_SESSION['attempts']++; $_SESSION['last_try']=time();
+            $error = 'Invalid email or password.';
         }
     }
 }
-?><!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Login</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font:14px Arial,sans-serif;background:#f5f5f5;display:flex;justify-content:center;align-items:center;min-height:100vh}.card{background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.1);padding:2rem;width:100%;max-width:380px}h2{text-align:center;color:#2e7d32;margin-bottom:.3rem}.sub{text-align:center;color:#888;font-size:12px;margin-bottom:1.2rem}label{display:block;margin-bottom:3px}input{width:100%;padding:9px 11px;border:1px solid #ccc;border-radius:5px;font-size:14px;margin-bottom:.9rem}input:focus{outline:none;border-color:#2e7d32}.btn{width:100%;padding:10px;background:#2e7d32;color:#fff;border:none;border-radius:5px;font-size:15px;cursor:pointer}.btn:hover{background:#1b5e20}.btn:disabled{background:#aaa}.err{background:#ffebee;color:#c62828;padding:10px;border-radius:5px;margin-bottom:1rem;font-size:13px}.foot{text-align:center;margin-top:.9rem;color:#666}.foot a{color:#2e7d32}</style>
-</head><body><div class="card">
-<h2>&#127869; Login</h2>
-<p class="sub">Food Redistribution System</p>
-<?php if($err||$locked): ?>
-<div class="err"><?= $locked ? "Too many attempts. Wait 5 min." : htmlspecialchars($err) ?></div>
-<?php endif; ?>
-<?php if(isset($_GET['timeout'])): ?><div class="err">Session expired. Please login again.</div><?php endif; ?>
-<form method="POST">
-    <label>Email</label>
-    <input type="email" name="email" value="<?=htmlspecialchars($email)?>" <?=$locked?'disabled':''?> required autofocus>
-    <label>Password</label>
-    <input type="password" name="password" <?=$locked?'disabled':''?> required>
-    <button class="btn" type="submit" <?=$locked?'disabled':''?>>Log In</button>
-</form>
-<div class="foot">No account? <a href="register.php">Register</a></div>
-</div></body></html>
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — FoodShare BD</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="text-center mb-4">
+      <div class="auth-logo"><i class="fas fa-seedling me-2"></i>Food<span>Share</span></div>
+      <p class="text-muted mt-1" style="font-size:0.9rem;">Reducing waste, feeding hope</p>
+    </div>
+
+    <?php if ($error): ?>
+      <div class="alert alert-danger py-2"><i class="fas fa-exclamation-circle me-2"></i><?= $error ?></div>
+    <?php endif; ?>
+
+    <form method="POST">
+      <div class="mb-3">
+        <label class="form-label">Email Address</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-envelope text-muted"></i></span>
+          <input type="email" name="email" class="form-control" placeholder="you@email.com" required
+                 value="<?= isset($_POST['email']) ? htmlspecialchars($_POST['email']) : '' ?>">
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="form-label">Password</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-lock text-muted"></i></span>
+          <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 py-2" style="font-size:1rem;">
+        <i class="fas fa-sign-in-alt me-2"></i>Login
+      </button>
+    </form>
+
+    <hr class="my-4">
+    <p class="text-center text-muted" style="font-size:0.88rem;">
+      Don't have an account? <a href="register.php" class="text-decoration-none fw-bold" style="color:var(--primary);">Register here</a>
+    </p>
+
+    <!-- Demo credentials box -->
+    <div class="mt-3 p-3 rounded" style="background:#f8f9fa;font-size:0.78rem;">
+      <strong>Demo Accounts (password: <code>password</code>)</strong><br>
+      <span class="badge bg-danger me-1">Admin</span> admin@food.com<br>
+      <span class="badge bg-success me-1">Donor</span> rahim@donor.com<br>
+      <span class="badge bg-primary me-1">Receiver</span> ngo@receiver.com
+    </div>
+  </div>
+</div>
+</body>
+</html>
