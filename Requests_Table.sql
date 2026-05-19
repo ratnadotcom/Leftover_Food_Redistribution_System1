@@ -1,20 +1,11 @@
-CREATE TABLE Requests (
-    request_id       INT PRIMARY KEY AUTO_INCREMENT,
-    receiver_id      INT NOT NULL,
-    food_id          INT NOT NULL,
-    request_quantity INT NOT NULL CHECK (request_quantity > 0),
-    request_time     DATETIME DEFAULT CURRENT_TIMESTAMP,
-    status           ENUM('pending','approved','rejected','completed') NOT NULL DEFAULT 'pending',
-    FOREIGN KEY (receiver_id) REFERENCES Receivers(receiver_id) ON DELETE CASCADE,
-    FOREIGN KEY (food_id)     REFERENCES Food_Items(food_id)    ON DELETE CASCADE
-);
-
-ALTER TABLE requests
-ADD requested_quantity INT NOT NULL;
-ALTER TABLE requests
-MODIFY status ENUM(
-'pending',
-'assigned',
-'completed',
-'cancelled'
+CREATE TABLE requests (
+    id          INT PRIMARY KEY AUTO_INCREMENT,
+    food_id     INT NOT NULL,
+    receiver_id INT NOT NULL,
+    quantity    INT NOT NULL DEFAULT 1,
+    message     TEXT,
+    status      ENUM('pending','approved','rejected','delivered') DEFAULT 'pending',
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (food_id)     REFERENCES food(id) ON DELETE CASCADE,
+    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
 );
