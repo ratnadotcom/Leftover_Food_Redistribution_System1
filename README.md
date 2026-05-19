@@ -26,8 +26,8 @@ The **Leftover Food Redistribution System** is a database-driven web application
 | # | Name | GitHub | Role | Responsibility |
 |---|------|--------|------|----------------|
 | 1 | Mst. Ratna | [@ratnadotcom](https://github.com/ratnadotcom) | Database Lead | Database design, SQL schema, all queries |
-| 2 | Rifat | — | Backend Dev | Authentication — Login, Register, Session |
-| 3 | Shimul | — | Backend Dev | Food module — Add, Edit, Delete food items |
+| 2 | Rifat |  | Backend Dev | Authentication — Login, Register, Session |
+| 3 | Shimul | [@shimul190](https://github.com/shimul190) | Backend Dev | Food module — Add, Edit, Delete food items |
 | 4 | Nihad | — | Backend Dev | Request module — Request food, approve/reject |
 | 5 | Mahmod | — | Frontend Lead | UI design, Admin dashboard, Integration |
 
