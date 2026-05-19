@@ -1,7 +1,3 @@
--- INSERT: Receiver makes a food request
-INSERT INTO Requests (receiver_id, food_id, request_quantity)
-VALUES (1, 2, 15);
-
 -- SELECT: Get all requests
 SELECT * FROM Requests;
 
