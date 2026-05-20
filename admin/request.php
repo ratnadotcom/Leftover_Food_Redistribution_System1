@@ -1,176 +1,260 @@
-```php id="p4x8mz"
 <?php
-// admin/requests.php — Manage food requests
+// =====================================
+// admin/requests.php
+// Admin panel for managing food requests
+// =====================================
 
+
+// Include database connection
+// and helper functions
 require_once '../includes/config.php';
 
+
+// Restrict access only for admin users
 requireRole('admin');
 
+
+// Variable for success/error messages
 $msg = '';
 
+
+
 // =====================================
-// APPROVE + ASSIGN DELIVERY
+// APPROVE REQUEST + ASSIGN DELIVERY
+// Runs when admin approves a request
+// and assigns a delivery person
 // =====================================
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST'
 && isset($_POST['approve_assign'])) {
 
+    // Get request ID from form
     $request_id = (int)$_POST['request_id'];
 
+    // Sanitize delivery person input
     $delivery_person = clean($conn,
     $_POST['delivery_person']);
 
+    // Sanitize contact number
     $contact = clean($conn,
     $_POST['contact']);
 
+
+
+    // Start database transaction
     mysqli_begin_transaction($conn);
 
-    try{
+    try {
 
-        // Request info
+        // =====================================
+        // FETCH REQUEST INFORMATION
+        // =====================================
 
         $req = mysqli_fetch_assoc(
 
             mysqli_query($conn,
             "SELECT * FROM requests
-            WHERE id=$request_id")
+             WHERE id=$request_id")
 
         );
 
+        // Check if request exists
         if(!$req){
 
-            throw new Exception("Request not found");
+            throw new Exception(
+            "Request not found");
+
         }
 
-        // Food info
+
+
+        // =====================================
+        // FETCH FOOD INFORMATION
+        // =====================================
 
         $food = mysqli_fetch_assoc(
 
             mysqli_query($conn,
             "SELECT * FROM food
-            WHERE id={$req['food_id']}")
+             WHERE id={$req['food_id']}")
 
         );
 
+        // Check if food exists
         if(!$food){
 
-            throw new Exception("Food not found");
+            throw new Exception(
+            "Food not found");
+
         }
 
-        // Check quantity
 
-        if($req['requested_quantity'] > $food['quantity']){
 
-            throw new Exception("Insufficient quantity");
+        // =====================================
+        // CHECK AVAILABLE QUANTITY
+        // Prevent over-requesting
+        // =====================================
+
+        if($req['requested_quantity']
+        > $food['quantity']){
+
+            throw new Exception(
+            "Insufficient quantity");
+
         }
 
-        // Reduce quantity
+
+
+        // =====================================
+        // CALCULATE NEW FOOD QUANTITY
+        // =====================================
 
         $new_qty =
-        $food['quantity'] -
-        $req['requested_quantity'];
+        $food['quantity']
+        - $req['requested_quantity'];
 
-        // Update food
+
+
+        // =====================================
+        // UPDATE FOOD TABLE
+        // Reduce food quantity and
+        // mark food as reserved
+        // =====================================
 
         mysqli_query($conn,
         "UPDATE food
 
-        SET quantity='$new_qty',
-        status='reserved'
+         SET quantity='$new_qty',
+             status='reserved'
 
-        WHERE id={$food['id']}");
+         WHERE id={$food['id']}");
 
-        // Update request
+
+
+        // =====================================
+        // UPDATE REQUEST STATUS
+        // =====================================
 
         mysqli_query($conn,
         "UPDATE requests
 
-        SET status='assigned'
+         SET status='assigned'
 
-        WHERE id=$request_id");
+         WHERE id=$request_id");
 
-        // Create delivery
+
+
+        // =====================================
+        // CREATE DELIVERY RECORD
+        // Insert delivery information
+        // =====================================
 
         mysqli_query($conn,
 
         "INSERT INTO delivery
 
         (request_id,
-        delivery_person,
-        contact,
-        delivery_status,
-        created_at)
+         delivery_person,
+         contact,
+         delivery_status,
+         created_at)
 
-        VALUES
+         VALUES
 
         ($request_id,
-        '$delivery_person',
-        '$contact',
-        'assigned',
-        NOW())");
+         '$delivery_person',
+         '$contact',
+         'assigned',
+         NOW())");
 
+
+
+        // Save all changes permanently
         mysqli_commit($conn);
 
-        $msg = "Request approved and delivery assigned.";
+        // Success message
+        $msg =
+        "Request approved and delivery assigned.";
 
-    }catch(Exception $e){
+    } catch(Exception $e) {
 
+        // Undo all queries if error occurs
         mysqli_rollback($conn);
 
+        // Show error message
         $msg = $e->getMessage();
     }
 }
 
+
+
 // =====================================
 // REJECT REQUEST
+// Runs when admin rejects request
 // =====================================
 
 if(isset($_GET['reject'])){
 
+    // Get request ID from URL
     $id = (int)$_GET['reject'];
 
+    // Update request status to cancelled
     mysqli_query($conn,
 
     "UPDATE requests
 
-    SET status='cancelled'
+     SET status='cancelled'
 
-    WHERE id=$id");
+     WHERE id=$id");
 
+    // Success message
     $msg = "Request cancelled.";
 }
 
+
+
 // =====================================
-// FETCH REQUESTS
+// FETCH ALL REQUESTS
+// Join multiple tables to show
+// complete request information
 // =====================================
 
 $requests = mysqli_query($conn, "
 
 SELECT r.*,
 
-u.name AS receiver_name,
-u.phone AS receiver_phone,
+       -- Receiver Information
+       u.name AS receiver_name,
+       u.phone AS receiver_phone,
 
-f.food_name,
-f.quantity AS available_qty,
-f.unit,
-f.location,
-f.status AS food_status,
+       -- Food Information
+       f.food_name,
+       f.quantity AS available_qty,
+       f.unit,
+       f.location,
+       f.status AS food_status,
 
-d.delivery_person,
-d.delivery_status
+       -- Delivery Information
+       d.delivery_person,
+       d.delivery_status
 
 FROM requests r
 
+-- Join users table
 JOIN users u
 ON r.receiver_id = u.id
 
+-- Join food table
 JOIN food f
 ON r.food_id = f.id
 
+-- Left join delivery table
+-- because some requests may
+-- not yet have delivery assigned
 LEFT JOIN delivery d
 ON r.id = d.request_id
 
+-- Show newest requests first
 ORDER BY r.created_at DESC
 
 ");
@@ -186,16 +270,23 @@ ORDER BY r.created_at DESC
 <meta charset="UTF-8">
 
 <meta name="viewport"
-content="width=device-width, initial-scale=1.0">
+content="width=device-width,
+initial-scale=1.0">
 
 <title>Requests — Admin</title>
 
+
+<!-- Bootstrap CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
 rel="stylesheet">
 
+
+<!-- Font Awesome Icons -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 rel="stylesheet">
 
+
+<!-- Custom CSS -->
 <link href="../css/style.css"
 rel="stylesheet">
 
@@ -203,58 +294,84 @@ rel="stylesheet">
 
 <body>
 
+
+<!-- Include Navbar -->
 <?php include '../includes/navbar.php'; ?>
 
-<!-- SIDEBAR -->
+
+
+<!-- =====================================
+     SIDEBAR NAVIGATION
+===================================== -->
 
 <div class="sidebar">
 
+    <!-- Dashboard -->
     <a href="dashboard.php"
     class="nav-link">
 
         <i class="fas fa-tachometer-alt"></i>
+
         Dashboard
 
     </a>
 
+
+    <!-- User Management -->
     <a href="users.php"
     class="nav-link">
 
         <i class="fas fa-users"></i>
+
         Users
 
     </a>
 
+
+    <!-- Food Management -->
     <a href="food.php"
     class="nav-link">
 
         <i class="fas fa-utensils"></i>
+
         Food Items
 
     </a>
 
+
+    <!-- Request Management -->
     <a href="requests.php"
     class="nav-link active">
 
         <i class="fas fa-inbox"></i>
+
         Requests
 
     </a>
 
+
+    <!-- Delivery Management -->
     <a href="delivery.php"
     class="nav-link">
 
         <i class="fas fa-truck"></i>
+
         Deliveries
 
     </a>
 
 </div>
 
-<!-- MAIN CONTENT -->
+
+
+<!-- =====================================
+     MAIN CONTENT AREA
+===================================== -->
 
 <div class="main-content">
 
+
+    <!-- PAGE HEADER -->
     <div class="page-header">
 
         <h2>
@@ -274,6 +391,9 @@ rel="stylesheet">
 
     </div>
 
+
+
+    <!-- SUCCESS / ERROR MESSAGE -->
     <?php if($msg): ?>
 
         <div class="alert alert-success">
@@ -284,7 +404,11 @@ rel="stylesheet">
 
     <?php endif; ?>
 
-    <!-- REQUEST TABLE -->
+
+
+    <!-- =====================================
+         REQUEST TABLE
+    ===================================== -->
 
     <div class="card">
 
@@ -292,6 +416,8 @@ rel="stylesheet">
 
             <div class="table-responsive">
 
+
+                <!-- REQUESTS DATA TABLE -->
                 <table class="table table-hover mb-0">
 
                     <thead>
@@ -313,27 +439,37 @@ rel="stylesheet">
 
                     <tbody>
 
+
+                    <!-- SERIAL NUMBER -->
                     <?php $serial = 1; ?>
 
-                    <?php while($r = mysqli_fetch_assoc($requests)): ?>
+
+                    <!-- =====================================
+                         LOOP THROUGH ALL REQUESTS
+                    ===================================== -->
+
+                    <?php while($r =
+                    mysqli_fetch_assoc($requests)): ?>
 
                     <tr>
 
-                        <!-- SERIAL -->
 
+                        <!-- SERIAL -->
                         <td>
 
                             <?= $serial++ ?>
 
                         </td>
 
-                        <!-- RECEIVER -->
 
+
+                        <!-- RECEIVER INFORMATION -->
                         <td>
 
                             <strong>
 
-                                <?= htmlspecialchars($r['receiver_name']) ?>
+                                <?= htmlspecialchars(
+                                $r['receiver_name']) ?>
 
                             </strong>
 
@@ -347,24 +483,28 @@ rel="stylesheet">
 
                         </td>
 
-                        <!-- FOOD -->
 
+
+                        <!-- FOOD INFORMATION -->
                         <td>
 
-                            <?= htmlspecialchars($r['food_name']) ?>
+                            <?= htmlspecialchars(
+                            $r['food_name']) ?>
 
                             <br>
 
                             <small class="text-muted">
 
-                                <?= htmlspecialchars($r['location']) ?>
+                                <?= htmlspecialchars(
+                                $r['location']) ?>
 
                             </small>
 
                         </td>
 
-                        <!-- REQUESTED QTY -->
 
+
+                        <!-- REQUESTED QUANTITY -->
                         <td>
 
                             <?= $r['requested_quantity'] ?>
@@ -372,8 +512,9 @@ rel="stylesheet">
 
                         </td>
 
-                        <!-- AVAILABLE -->
 
+
+                        <!-- AVAILABLE QUANTITY -->
                         <td>
 
                             <?= $r['available_qty'] ?>
@@ -381,40 +522,59 @@ rel="stylesheet">
 
                         </td>
 
-                        <!-- STATUS -->
 
+
+                        <!-- REQUEST STATUS -->
                         <td>
 
                             <?php
 
+                            // Different badge colors
+                            // for different request status
+
                             if($r['status'] == 'pending'){
 
-                                echo "<span class='badge bg-warning text-dark'>
+                                echo "<span class='badge
+                                bg-warning text-dark'>
+
                                 Pending
+
                                 </span>";
 
                             }
 
-                            elseif($r['status'] == 'assigned'){
+                            elseif($r['status']
+                            == 'assigned'){
 
-                                echo "<span class='badge bg-primary'>
+                                echo "<span class='badge
+                                bg-primary'>
+
                                 Assigned
+
                                 </span>";
 
                             }
 
-                            elseif($r['status'] == 'completed'){
+                            elseif($r['status']
+                            == 'completed'){
 
-                                echo "<span class='badge bg-success'>
+                                echo "<span class='badge
+                                bg-success'>
+
                                 Completed
+
                                 </span>";
 
                             }
 
-                            elseif($r['status'] == 'cancelled'){
+                            elseif($r['status']
+                            == 'cancelled'){
 
-                                echo "<span class='badge bg-danger'>
+                                echo "<span class='badge
+                                bg-danger'>
+
                                 Cancelled
+
                                 </span>";
 
                             }
@@ -423,28 +583,35 @@ rel="stylesheet">
 
                         </td>
 
-                        <!-- DELIVERY -->
 
+
+                        <!-- DELIVERY INFORMATION -->
                         <td>
 
-                            <?php if($r['delivery_person']): ?>
+                            <?php if(
+                            $r['delivery_person']): ?>
 
+                                <!-- Delivery Person -->
                                 <span class="badge bg-info">
 
-                                    <?= htmlspecialchars($r['delivery_person']) ?>
+                                    <?= htmlspecialchars(
+                                    $r['delivery_person']) ?>
 
                                 </span>
 
                                 <br>
 
+                                <!-- Delivery Status -->
                                 <small>
 
-                                    <?= ucfirst($r['delivery_status']) ?>
+                                    <?= ucfirst(
+                                    $r['delivery_status']) ?>
 
                                 </small>
 
                             <?php else: ?>
 
+                                <!-- No delivery assigned -->
                                 <span class="text-muted">
 
                                     Not Assigned
@@ -455,29 +622,38 @@ rel="stylesheet">
 
                         </td>
 
-                        <!-- ACTION -->
 
+
+                        <!-- ACTION BUTTONS -->
                         <td>
 
-                            <?php if($r['status'] == 'pending'): ?>
+                            <?php if(
+                            $r['status']
+                            == 'pending'): ?>
 
-                            <!-- APPROVE FORM -->
 
-                            <button class="btn btn-sm btn-success"
+                            <!-- APPROVE BUTTON -->
+                            <button class="btn
+                            btn-sm btn-success"
 
                             data-bs-toggle="modal"
 
-                            data-bs-target="#approveModal<?= $r['id'] ?>">
+                            data-bs-target=
+                            "#approveModal<?= $r['id'] ?>">
 
                                 <i class="fas fa-check"></i>
 
                             </button>
 
+
+
+                            <!-- REJECT BUTTON -->
                             <a href="?reject=<?= $r['id'] ?>"
 
                             class="btn btn-sm btn-danger"
 
-                            onclick="return confirm('Reject this request?')">
+                            onclick="return confirm(
+                            'Reject this request?')">
 
                                 <i class="fas fa-times"></i>
 
@@ -485,6 +661,7 @@ rel="stylesheet">
 
                             <?php else: ?>
 
+                                <!-- Already Processed -->
                                 <span class="text-muted">
 
                                     Processed
@@ -497,7 +674,11 @@ rel="stylesheet">
 
                     </tr>
 
-                    <!-- APPROVE MODAL -->
+
+
+                    <!-- =====================================
+                         APPROVE REQUEST MODAL
+                    ===================================== -->
 
                     <div class="modal fade"
                     id="approveModal<?= $r['id'] ?>"
@@ -507,6 +688,8 @@ rel="stylesheet">
 
                             <div class="modal-content">
 
+
+                                <!-- Modal Header -->
                                 <div class="modal-header">
 
                                     <h5 class="modal-title">
@@ -517,24 +700,33 @@ rel="stylesheet">
 
                                     <button type="button"
                                     class="btn-close"
-                                    data-bs-dismiss="modal"></button>
+                                    data-bs-dismiss="modal">
+                                    </button>
 
                                 </div>
 
+
+
+                                <!-- Approval Form -->
                                 <form method="POST">
 
                                     <div class="modal-body">
 
+
+                                        <!-- Hidden Request ID -->
                                         <input type="hidden"
                                         name="request_id"
                                         value="<?= $r['id'] ?>">
 
+
+                                        <!-- Hidden Identifier -->
                                         <input type="hidden"
                                         name="approve_assign"
                                         value="1">
 
-                                        <!-- DELIVERY PERSON -->
 
+
+                                        <!-- DELIVERY PERSON -->
                                         <div class="mb-3">
 
                                             <label class="form-label">
@@ -550,8 +742,9 @@ rel="stylesheet">
 
                                         </div>
 
-                                        <!-- CONTACT -->
 
+
+                                        <!-- CONTACT NUMBER -->
                                         <div class="mb-3">
 
                                             <label class="form-label">
@@ -569,6 +762,9 @@ rel="stylesheet">
 
                                     </div>
 
+
+
+                                    <!-- Modal Footer -->
                                     <div class="modal-footer">
 
                                         <button type="submit"
@@ -602,9 +798,11 @@ rel="stylesheet">
 
 </div>
 
+
+
+<!-- Bootstrap JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 
 </html>
-```
