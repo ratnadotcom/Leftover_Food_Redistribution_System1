@@ -1,54 +1,95 @@
-```php id="v8rx1o"
 <?php
-// admin/users.php — View and manage all users
+// ======================================
+// admin/users.php
+// Admin panel to manage all users
+// ======================================
 
+
+// Include database configuration
+// and helper functions
 require_once '../includes/config.php';
 
+
+// Restrict access only for admins
 requireRole('admin');
 
-// Delete user
+
+
+// ======================================
+// DELETE USER
+// Runs when admin clicks delete button
+// ======================================
 
 if (isset($_GET['delete'])) {
 
+    // Get user ID from URL
     $id = (int)$_GET['delete'];
 
+
+    // Prevent admin from deleting own account
     if ($id !== $_SESSION['user_id']) {
 
+        // Delete selected user
         mysqli_query($conn,
         "DELETE FROM users WHERE id=$id");
 
+        // Success message
         $msg = 'User deleted successfully.';
     }
 }
 
-// Role filter
 
+
+// ======================================
+// ROLE FILTER
+// Filter users by role
+// ======================================
+
+// Get role from URL
 $filter = isset($_GET['role'])
+
 ? clean($conn, $_GET['role'])
+
 : '';
 
-$where  = $filter
+
+// Dynamic WHERE condition
+// If filter exists → show selected role
+// Otherwise → show all except admin
+$where = $filter
+
 ? "WHERE role='$filter'"
+
 : "WHERE role != 'admin'";
 
-// Fetch users
+
+
+// ======================================
+// FETCH USERS
+// Get all user information along with
+// activity statistics
+// ======================================
 
 $users = mysqli_query($conn, "
 
     SELECT u.*,
 
+      -- Count donated food items
       (SELECT COUNT(*)
        FROM food
        WHERE donor_id=u.id) AS food_count,
 
+      -- Count receiver requests
       (SELECT COUNT(*)
        FROM requests
        WHERE receiver_id=u.id) AS req_count
 
     FROM users u
 
+    -- Apply role filter
     $where
 
+    -- Show latest users first
     ORDER BY u.created_at DESC
 
 ");
@@ -65,12 +106,18 @@ $users = mysqli_query($conn, "
 
 <title>All Users — Admin</title>
 
+
+<!-- Bootstrap CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
 rel="stylesheet">
 
+
+<!-- Font Awesome Icons -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 rel="stylesheet">
 
+
+<!-- Custom CSS -->
 <link href="../css/style.css"
 rel="stylesheet">
 
@@ -78,58 +125,92 @@ rel="stylesheet">
 
 <body>
 
+
+<!-- Include Navbar -->
 <?php include '../includes/navbar.php'; ?>
+
+
+
+<!-- ======================================
+     SIDEBAR NAVIGATION
+====================================== -->
 
 <div class="sidebar">
 
+    <!-- Dashboard -->
     <a href="dashboard.php"
     class="nav-link">
 
         <i class="fas fa-tachometer-alt"></i>
+
         Dashboard
 
     </a>
 
+
+    <!-- Users Page -->
     <a href="users.php"
     class="nav-link active">
 
         <i class="fas fa-users"></i>
+
         All Users
 
     </a>
 
+
+    <!-- Food Management -->
     <a href="food.php"
     class="nav-link">
 
         <i class="fas fa-utensils"></i>
+
         Food Items
 
     </a>
 
+
+    <!-- Sidebar Label -->
     <div class="sidebar-label">
+
         Manage
+
     </div>
 
+
+    <!-- Request Management -->
     <a href="requests.php"
     class="nav-link">
 
         <i class="fas fa-inbox"></i>
+
         Requests
 
     </a>
 
+
+    <!-- Delivery Management -->
     <a href="delivery.php"
     class="nav-link">
 
         <i class="fas fa-truck"></i>
+
         Deliveries
 
     </a>
 
 </div>
 
+
+
+<!-- ======================================
+     MAIN CONTENT AREA
+====================================== -->
+
 <div class="main-content">
 
+
+    <!-- PAGE HEADER -->
     <div class="page-header">
 
         <h2>
@@ -143,6 +224,9 @@ rel="stylesheet">
 
     </div>
 
+
+
+    <!-- SUCCESS MESSAGE -->
     <?php if (isset($msg)): ?>
 
         <div class="alert alert-success">
@@ -153,33 +237,65 @@ rel="stylesheet">
 
     <?php endif; ?>
 
-    <!-- Filter Buttons -->
+
+
+    <!-- ======================================
+         FILTER BUTTONS
+         Filter users by role
+    ====================================== -->
 
     <div class="mb-3 d-flex gap-2">
 
+
+        <!-- Show All Users -->
         <a href="users.php"
-        class="btn btn-sm <?= !$filter ? 'btn-primary' : 'btn-outline-secondary' ?>">
+
+        class="btn btn-sm
+        <?= !$filter
+        ? 'btn-primary'
+        : 'btn-outline-secondary' ?>">
 
             All
 
         </a>
 
+
+
+        <!-- Donor Filter -->
         <a href="?role=donor"
-        class="btn btn-sm <?= $filter==='donor' ? 'btn-success' : 'btn-outline-success' ?>">
+
+        class="btn btn-sm
+        <?= $filter==='donor'
+        ? 'btn-success'
+        : 'btn-outline-success' ?>">
 
             Donors
 
         </a>
 
+
+
+        <!-- Receiver Filter -->
         <a href="?role=receiver"
-        class="btn btn-sm <?= $filter==='receiver' ? 'btn-primary' : 'btn-outline-primary' ?>">
+
+        class="btn btn-sm
+        <?= $filter==='receiver'
+        ? 'btn-primary'
+        : 'btn-outline-primary' ?>">
 
             Receivers
 
         </a>
 
+
+
+        <!-- Delivery Staff Filter -->
         <a href="?role=delivery"
-        class="btn btn-sm <?= $filter==='delivery' ? 'btn-warning' : 'btn-outline-warning' ?>">
+
+        class="btn btn-sm
+        <?= $filter==='delivery'
+        ? 'btn-warning'
+        : 'btn-outline-warning' ?>">
 
             Delivery
 
@@ -187,12 +303,20 @@ rel="stylesheet">
 
     </div>
 
+
+
+    <!-- ======================================
+         USERS TABLE CARD
+    ====================================== -->
+
     <div class="card">
 
         <div class="card-body p-0">
 
             <div class="table-responsive">
 
+
+                <!-- USERS TABLE -->
                 <table class="table table-hover mb-0">
 
                     <thead>
@@ -215,69 +339,100 @@ rel="stylesheet">
 
                     <tbody>
 
+
+                    <!-- SERIAL NUMBER -->
                     <?php $serial = 1; ?>
 
-                    <?php while ($u = mysqli_fetch_assoc($users)): ?>
+
+                    <!-- ======================================
+                         LOOP THROUGH USERS
+                    ====================================== -->
+
+                    <?php while (
+                    $u = mysqli_fetch_assoc($users)): ?>
 
                     <tr>
 
-                        <!-- SERIAL NUMBER -->
 
+                        <!-- SERIAL -->
                         <td>
 
                             <?= $serial++ ?>
 
                         </td>
 
-                        <!-- NAME -->
 
+
+                        <!-- USER NAME -->
                         <td>
 
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex
+                            align-items-center gap-2">
 
+
+                                <!-- User Avatar -->
                                 <div class="avatar"
-                                style="width:28px;height:28px;font-size:0.75rem;">
 
-                                    <?= strtoupper(substr($u['name'],0,1)) ?>
+                                style="width:28px;
+                                height:28px;
+                                font-size:0.75rem;">
+
+                                    <!-- First letter of username -->
+                                    <?= strtoupper(
+                                    substr($u['name'],0,1)) ?>
 
                                 </div>
 
-                                <?= htmlspecialchars($u['name']) ?>
+
+                                <!-- Full Name -->
+                                <?= htmlspecialchars(
+                                $u['name']) ?>
 
                             </div>
 
                         </td>
 
-                        <!-- EMAIL -->
 
+
+                        <!-- EMAIL -->
                         <td>
 
-                            <?= htmlspecialchars($u['email']) ?>
+                            <?= htmlspecialchars(
+                            $u['email']) ?>
 
                         </td>
+
+
 
                         <!-- PHONE -->
-
                         <td>
 
-                            <?= $u['phone'] ?: '—' ?>
+                            <!-- Show dash if phone empty -->
+                            <?= $u['phone']
+                            ?: '—' ?>
 
                         </td>
+
+
 
                         <!-- ADDRESS -->
-
                         <td>
 
-                            <?= htmlspecialchars($u['address'] ?: '—') ?>
+                            <!-- Show dash if address empty -->
+                            <?= htmlspecialchars(
+                            $u['address']
+                            ?: '—') ?>
 
                         </td>
 
-                        <!-- ROLE -->
 
+
+                        <!-- ROLE -->
                         <td>
 
                             <?php
 
+                            // Role color mapping
                             $rc = [
 
                                 'donor'   => 'success',
@@ -289,37 +444,56 @@ rel="stylesheet">
 
                             ?>
 
-                            <span class="badge bg-<?= $rc[$u['role']] ?? 'secondary' ?>">
 
-                                <?= ucfirst($u['role']) ?>
+                            <!-- Role Badge -->
+                            <span class="badge
+                            bg-<?= $rc[$u['role']]
+                            ?? 'secondary' ?>">
+
+                                <?= ucfirst(
+                                $u['role']) ?>
 
                             </span>
 
                         </td>
 
-                        <!-- ACTIVITY -->
 
+
+                        <!-- USER ACTIVITY -->
                         <td>
 
-                            <?php if ($u['role'] === 'donor'): ?>
+                            <?php if (
+                            $u['role'] === 'donor'): ?>
 
-                                <span class="badge bg-light text-dark">
 
-                                    <?= $u['food_count'] ?> foods
+                                <!-- Donor Activity -->
+                                <span class="badge
+                                bg-light text-dark">
+
+                                    <?= $u['food_count'] ?>
+                                    foods
 
                                 </span>
 
-                            <?php elseif ($u['role'] === 'receiver'): ?>
+                            <?php elseif (
+                            $u['role'] === 'receiver'): ?>
 
-                                <span class="badge bg-light text-dark">
 
-                                    <?= $u['req_count'] ?> requests
+                                <!-- Receiver Activity -->
+                                <span class="badge
+                                bg-light text-dark">
+
+                                    <?= $u['req_count'] ?>
+                                    requests
 
                                 </span>
 
                             <?php else: ?>
 
-                                <span class="badge bg-light text-dark">
+
+                                <!-- Delivery Staff -->
+                                <span class="badge
+                                bg-light text-dark">
 
                                     Delivery Staff
 
@@ -329,22 +503,32 @@ rel="stylesheet">
 
                         </td>
 
-                        <!-- JOIN DATE -->
 
+
+                        <!-- JOIN DATE -->
                         <td style="font-size:0.8rem;">
 
-                            <?= date('d M Y', strtotime($u['created_at'])) ?>
+
+                            <!-- Format join date -->
+                            <?= date(
+                            'd M Y',
+                            strtotime($u['created_at'])) ?>
 
                         </td>
 
-                        <!-- ACTION -->
 
+
+                        <!-- DELETE ACTION -->
                         <td>
 
+                            <!-- Delete User Button -->
                             <a href="?delete=<?= $u['id'] ?>"
-                            class="btn btn-sm btn-outline-danger"
 
-                            onclick="return confirm('Delete this user?')">
+                            class="btn btn-sm
+                            btn-outline-danger"
+
+                            onclick="return confirm(
+                            'Delete this user?')">
 
                                 <i class="fas fa-trash"></i>
 
@@ -368,9 +552,11 @@ rel="stylesheet">
 
 </div>
 
+
+
+<!-- Bootstrap JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 
 </html>
-```
