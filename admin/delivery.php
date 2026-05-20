@@ -1,39 +1,50 @@
-```php id="f9x2mb"
 <?php
-// admin/delivery.php — Manage deliveries
+// ======================================
+// admin/delivery.php
+// Admin panel for managing deliveries
+// ======================================
 
+// Include database connection and helper functions
 require_once '../includes/config.php';
 
+// Restrict access only for admin users
 requireRole('admin');
 
+// Variable for showing success/error messages
 $msg = '';
+
 
 // ======================================
 // UPDATE DELIVERY STATUS
+// Handles form submission when admin
+// updates a delivery
 // ======================================
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST'
 && isset($_POST['update_delivery'])) {
 
-    $id      = (int)$_POST['delivery_id'];
+    // Get delivery ID from form
+    $id = (int)$_POST['delivery_id'];
 
-    $status  = clean($conn,
-    $_POST['delivery_status']);
+    // Sanitize all user inputs
+    $status = clean($conn, $_POST['delivery_status']);
 
-    $person  = clean($conn,
-    $_POST['delivery_person']);
+    $person = clean($conn, $_POST['delivery_person']);
 
-    $contact = clean($conn,
-    $_POST['contact']);
+    $contact = clean($conn, $_POST['contact']);
 
-    $notes   = clean($conn,
-    $_POST['notes']);
+    $notes = clean($conn, $_POST['notes']);
 
+    // Start MySQL transaction
+    // so all related queries run safely together
     mysqli_begin_transaction($conn);
 
-    try{
+    try {
 
-        // Update delivery
+        // ======================================
+        // UPDATE DELIVERY TABLE
+        // Update delivery information
+        // ======================================
 
         mysqli_query($conn, "
 
@@ -41,131 +52,166 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
 
             SET delivery_status='$status',
 
-            delivery_person='$person',
+                delivery_person='$person',
 
-            contact='$contact',
+                contact='$contact',
 
-            notes='$notes'
+                notes='$notes'
 
             WHERE id=$id
 
         ");
 
-        // Get request ID
+        // ======================================
+        // FETCH RELATED REQUEST ID
+        // Every delivery belongs to a request
+        // ======================================
 
         $d = mysqli_fetch_assoc(
 
             mysqli_query($conn,
             "SELECT request_id
-            FROM delivery
-            WHERE id=$id")
+             FROM delivery
+             WHERE id=$id")
 
         );
 
+        // Store request ID
         $request_id = $d['request_id'];
 
+
+
         // ======================================
-        // SYNCHRONIZE STATUS
+        // SYNCHRONIZE REQUEST & FOOD STATUS
+        // Keep request and food tables updated
+        // based on delivery status
         // ======================================
 
+
+        // --------------------------------------
+        // CASE 1: Delivery Assigned
+        // --------------------------------------
         if ($status === 'assigned') {
 
+            // Update request status
             mysqli_query($conn,
             "UPDATE requests
-            SET status='assigned'
-            WHERE id=$request_id");
+             SET status='assigned'
+             WHERE id=$request_id");
 
         }
 
+
+        // --------------------------------------
+        // CASE 2: Food Picked Up
+        // --------------------------------------
         elseif ($status === 'picked_up') {
 
+            // Keep request marked as assigned
             mysqli_query($conn,
             "UPDATE requests
-            SET status='assigned'
-            WHERE id=$request_id");
+             SET status='assigned'
+             WHERE id=$request_id");
 
         }
 
+
+        // --------------------------------------
+        // CASE 3: Delivery Completed
+        // --------------------------------------
         elseif ($status === 'delivered') {
 
-            // Request complete
-
+            // Mark request as completed
             mysqli_query($conn,
             "UPDATE requests
-            SET status='completed'
-            WHERE id=$request_id");
+             SET status='completed'
+             WHERE id=$request_id");
 
-            // Food complete
-
+            // Get food ID linked with request
             $req = mysqli_fetch_assoc(
 
                 mysqli_query($conn,
                 "SELECT food_id
-                FROM requests
-                WHERE id=$request_id")
+                 FROM requests
+                 WHERE id=$request_id")
 
             );
 
+            // Mark food as completed/unavailable
             mysqli_query($conn,
             "UPDATE food
-            SET status='completed'
-            WHERE id={$req['food_id']}");
+             SET status='completed'
+             WHERE id={$req['food_id']}");
 
         }
 
+
+        // --------------------------------------
+        // CASE 4: Delivery Cancelled
+        // --------------------------------------
         elseif ($status === 'cancelled') {
 
             // Cancel request
-
             mysqli_query($conn,
             "UPDATE requests
-            SET status='cancelled'
-            WHERE id=$request_id");
+             SET status='cancelled'
+             WHERE id=$request_id");
 
-            // Restore food
-
+            // Get related food ID
             $req = mysqli_fetch_assoc(
 
                 mysqli_query($conn,
                 "SELECT food_id
-                FROM requests
-                WHERE id=$request_id")
+                 FROM requests
+                 WHERE id=$request_id")
 
             );
 
+            // Restore food availability
             mysqli_query($conn,
             "UPDATE food
-            SET status='available'
-            WHERE id={$req['food_id']}");
+             SET status='available'
+             WHERE id={$req['food_id']}");
 
         }
 
+        // Save all database changes permanently
         mysqli_commit($conn);
 
+        // Success message
         $msg = 'Delivery updated successfully!';
 
-    }catch(Exception $e){
+    } catch(Exception $e) {
 
+        // Rollback transaction if error occurs
         mysqli_rollback($conn);
 
+        // Show error message
         $msg = $e->getMessage();
     }
 }
 
+
+
 // ======================================
-// FETCH DELIVERIES
+// FETCH ALL DELIVERIES
+// Query joins multiple tables to show
+// complete delivery information
 // ======================================
 
 $deliveries = mysqli_query($conn, "
 
     SELECT d.*,
 
+           -- Request table data
            r.status AS req_status,
 
+           -- Receiver information
            u.name AS receiver_name,
            u.phone AS receiver_phone,
            u.address AS receiver_addr,
 
+           -- Food information
            f.food_name,
            f.quantity,
            f.unit,
@@ -173,15 +219,19 @@ $deliveries = mysqli_query($conn, "
 
     FROM delivery d
 
+    -- Join request table
     JOIN requests r
     ON d.request_id = r.id
 
+    -- Join user table for receiver info
     JOIN users u
     ON r.receiver_id = u.id
 
+    -- Join food table for food details
     JOIN food f
     ON r.food_id = f.id
 
+    -- Show latest updated deliveries first
     ORDER BY d.updated_at DESC
 
 ");
@@ -198,12 +248,15 @@ $deliveries = mysqli_query($conn, "
 
 <title>Deliveries — Admin</title>
 
+<!-- Bootstrap CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
 rel="stylesheet">
 
+<!-- Font Awesome Icons -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 rel="stylesheet">
 
+<!-- Custom CSS -->
 <link href="../css/style.css"
 rel="stylesheet">
 
@@ -211,12 +264,17 @@ rel="stylesheet">
 
 <body>
 
+<!-- Include navbar -->
 <?php include '../includes/navbar.php'; ?>
 
-<!-- SIDEBAR -->
+
+<!-- ======================================
+     SIDEBAR NAVIGATION
+====================================== -->
 
 <div class="sidebar">
 
+    <!-- Dashboard -->
     <a href="dashboard.php"
     class="nav-link">
 
@@ -225,6 +283,7 @@ rel="stylesheet">
 
     </a>
 
+    <!-- User Management -->
     <a href="users.php"
     class="nav-link">
 
@@ -233,6 +292,7 @@ rel="stylesheet">
 
     </a>
 
+    <!-- Food Management -->
     <a href="food.php"
     class="nav-link">
 
@@ -241,12 +301,14 @@ rel="stylesheet">
 
     </a>
 
+    <!-- Sidebar Label -->
     <div class="sidebar-label">
 
         Manage
 
     </div>
 
+    <!-- Request Management -->
     <a href="requests.php"
     class="nav-link">
 
@@ -255,6 +317,7 @@ rel="stylesheet">
 
     </a>
 
+    <!-- Delivery Management -->
     <a href="delivery.php"
     class="nav-link active">
 
@@ -265,10 +328,15 @@ rel="stylesheet">
 
 </div>
 
-<!-- MAIN CONTENT -->
+
+
+<!-- ======================================
+     MAIN CONTENT AREA
+====================================== -->
 
 <div class="main-content">
 
+    <!-- Page Header -->
     <div class="page-header">
 
         <h2>
@@ -288,6 +356,8 @@ rel="stylesheet">
 
     </div>
 
+
+    <!-- Success/Error Alert -->
     <?php if ($msg): ?>
 
         <div class="alert alert-success">
@@ -298,7 +368,10 @@ rel="stylesheet">
 
     <?php endif; ?>
 
-    <!-- DELIVERY TABLE -->
+
+    <!-- ======================================
+         DELIVERY TABLE CARD
+    ====================================== -->
 
     <div class="card">
 
@@ -306,6 +379,7 @@ rel="stylesheet">
 
             <div class="table-responsive">
 
+                <!-- Delivery Data Table -->
                 <table class="table table-hover mb-0">
 
                     <thead>
@@ -327,22 +401,23 @@ rel="stylesheet">
 
                     <tbody>
 
+                    <!-- Serial number counter -->
                     <?php $serial = 1; ?>
 
+                    <!-- Loop through all deliveries -->
                     <?php while($d = mysqli_fetch_assoc($deliveries)): ?>
 
                     <tr>
 
-                        <!-- SERIAL -->
-
+                        <!-- SERIAL NUMBER -->
                         <td>
 
                             <?= $serial++ ?>
 
                         </td>
 
-                        <!-- RECEIVER -->
 
+                        <!-- RECEIVER INFORMATION -->
                         <td>
 
                             <strong>
@@ -361,16 +436,16 @@ rel="stylesheet">
 
                         </td>
 
-                        <!-- FOOD -->
 
+                        <!-- FOOD NAME -->
                         <td>
 
                             <?= htmlspecialchars($d['food_name']) ?>
 
                         </td>
 
-                        <!-- QUANTITY -->
 
+                        <!-- FOOD QUANTITY -->
                         <td>
 
                             <?= $d['quantity'] ?>
@@ -378,8 +453,8 @@ rel="stylesheet">
 
                         </td>
 
-                        <!-- LOCATION -->
 
+                        <!-- DELIVERY LOCATION -->
                         <td>
 
                             <i class="fas fa-map-marker-alt text-danger me-1"></i>
@@ -388,8 +463,8 @@ rel="stylesheet">
 
                         </td>
 
-                        <!-- DELIVERY PERSON -->
 
+                        <!-- DELIVERY PERSON DETAILS -->
                         <td>
 
                             <?= htmlspecialchars($d['delivery_person']) ?>
@@ -404,11 +479,14 @@ rel="stylesheet">
 
                         </td>
 
-                        <!-- STATUS -->
 
+                        <!-- DELIVERY STATUS -->
                         <td>
 
                             <?php
+
+                            // Show different badge colors
+                            // depending on delivery status
 
                             if($d['delivery_status'] == 'assigned'){
 
@@ -446,10 +524,11 @@ rel="stylesheet">
 
                         </td>
 
-                        <!-- ACTION -->
 
+                        <!-- ACTION BUTTON -->
                         <td>
 
+                            <!-- Button opens update modal -->
                             <button class="btn btn-sm btn-outline-primary"
 
                             data-bs-toggle="modal"
@@ -464,7 +543,11 @@ rel="stylesheet">
 
                     </tr>
 
-                    <!-- MODAL -->
+
+
+                    <!-- ======================================
+                         UPDATE DELIVERY MODAL
+                    ====================================== -->
 
                     <div class="modal fade"
                     id="editModal<?= $d['id'] ?>"
@@ -474,6 +557,7 @@ rel="stylesheet">
 
                             <div class="modal-content">
 
+                                <!-- Modal Header -->
                                 <div class="modal-header">
 
                                     <h5 class="modal-title">
@@ -488,20 +572,24 @@ rel="stylesheet">
 
                                 </div>
 
+
+                                <!-- Update Form -->
                                 <form method="POST">
 
                                     <div class="modal-body">
 
+                                        <!-- Hidden Delivery ID -->
                                         <input type="hidden"
                                         name="delivery_id"
                                         value="<?= $d['id'] ?>">
 
+                                        <!-- Hidden Form Identifier -->
                                         <input type="hidden"
                                         name="update_delivery"
                                         value="1">
 
-                                        <!-- PERSON -->
 
+                                        <!-- DELIVERY PERSON -->
                                         <div class="mb-3">
 
                                             <label class="form-label">
@@ -518,8 +606,8 @@ rel="stylesheet">
 
                                         </div>
 
-                                        <!-- CONTACT -->
 
+                                        <!-- CONTACT -->
                                         <div class="mb-3">
 
                                             <label class="form-label">
@@ -536,8 +624,8 @@ rel="stylesheet">
 
                                         </div>
 
-                                        <!-- STATUS -->
 
+                                        <!-- DELIVERY STATUS -->
                                         <div class="mb-3">
 
                                             <label class="form-label">
@@ -577,8 +665,8 @@ rel="stylesheet">
 
                                         </div>
 
-                                        <!-- NOTES -->
 
+                                        <!-- DELIVERY NOTES -->
                                         <div class="mb-3">
 
                                             <label class="form-label">
@@ -595,6 +683,8 @@ rel="stylesheet">
 
                                     </div>
 
+
+                                    <!-- Modal Footer -->
                                     <div class="modal-footer">
 
                                         <button type="submit"
@@ -628,9 +718,10 @@ rel="stylesheet">
 
 </div>
 
+
+<!-- Bootstrap JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 
 </html>
-```
