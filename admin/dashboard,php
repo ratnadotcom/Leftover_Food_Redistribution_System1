@@ -1,81 +1,157 @@
-```php id="6mv9x2"
 <?php
-// admin/dashboard.php
+
+// ======================================================
+// ADMIN DASHBOARD PAGE
+// This page shows overall system statistics
+// and recent delivery activities for admin.
+// ======================================================
+
+
+// Load configuration file
+// Includes database connection, session, helper functions
 
 require_once '../includes/config.php';
 
+
+// Allow only admin users to access this page
+
 requireRole('admin');
 
-// =============================
-// STATISTICS
-// =============================
 
-// Total Users
+// ======================================================
+// DASHBOARD STATISTICS SECTION
+// Here we calculate all important counts
+// shown in dashboard summary cards.
+// ======================================================
+
+
+
+// ======================================================
+// TOTAL USERS COUNT
+// Counts all registered users in the system
+// ======================================================
 
 $total_users = mysqli_num_rows(
-mysqli_query($conn,
-"SELECT * FROM users")
+
+    mysqli_query($conn,
+    "SELECT * FROM users")
+
 );
 
-// Donors
+
+
+// ======================================================
+// TOTAL DONORS COUNT
+// Counts users whose role is donor
+// ======================================================
 
 $total_donors = mysqli_num_rows(
-mysqli_query($conn,
-"SELECT * FROM users
-WHERE role='donor'")
+
+    mysqli_query($conn,
+    "SELECT * FROM users
+    WHERE role='donor'")
+
 );
 
-// Receivers
+
+
+// ======================================================
+// TOTAL RECEIVERS COUNT
+// Counts users who receive food donations
+// ======================================================
 
 $total_receivers = mysqli_num_rows(
-mysqli_query($conn,
-"SELECT * FROM users
-WHERE role='receiver'")
+
+    mysqli_query($conn,
+    "SELECT * FROM users
+    WHERE role='receiver'")
+
 );
 
-// Delivery Staff
+
+
+// ======================================================
+// TOTAL DELIVERY STAFF COUNT
+// Counts all delivery personnel
+// ======================================================
 
 $total_delivery = mysqli_num_rows(
-mysqli_query($conn,
-"SELECT * FROM users
-WHERE role='delivery'")
+
+    mysqli_query($conn,
+    "SELECT * FROM users
+    WHERE role='delivery'")
+
 );
 
-// Food Items
+
+
+// ======================================================
+// TOTAL FOOD ITEMS COUNT
+// Counts all food records in database
+// ======================================================
 
 $total_food = mysqli_num_rows(
-mysqli_query($conn,
-"SELECT * FROM food")
+
+    mysqli_query($conn,
+    "SELECT * FROM food")
+
 );
 
-// Pending Requests
+
+
+// ======================================================
+// PENDING REQUESTS COUNT
+// Counts food requests waiting for approval
+// ======================================================
 
 $pending_requests = mysqli_num_rows(
-mysqli_query($conn,
-"SELECT * FROM requests
-WHERE status='pending'")
+
+    mysqli_query($conn,
+    "SELECT * FROM requests
+    WHERE status='pending'")
+
 );
 
-// Active Deliveries
+
+
+// ======================================================
+// ACTIVE DELIVERIES COUNT
+// Counts deliveries that are currently ongoing
+// assigned OR picked up
+// ======================================================
 
 $active_delivery = mysqli_num_rows(
-mysqli_query($conn,
-"SELECT * FROM deliveries
-WHERE status='assigned'
-OR status='picked_up'")
+
+    mysqli_query($conn,
+    "SELECT * FROM deliveries
+    WHERE status='assigned'
+    OR status='picked_up'")
+
 );
 
-// Completed Deliveries
+
+
+// ======================================================
+// COMPLETED DELIVERIES COUNT
+// Counts successfully delivered food
+// ======================================================
 
 $completed_delivery = mysqli_num_rows(
-mysqli_query($conn,
-"SELECT * FROM deliveries
-WHERE status='delivered'")
+
+    mysqli_query($conn,
+    "SELECT * FROM deliveries
+    WHERE status='delivered'")
+
 );
 
-// =============================
-// RECENT DELIVERIES
-// =============================
+
+
+
+// ======================================================
+// RECENT DELIVERIES SECTION
+// Fetch latest 5 deliveries with related info
+// using JOIN queries
+// ======================================================
 
 $recent_deliveries = mysqli_query($conn,
 
@@ -91,23 +167,43 @@ requests.status AS request_status
 
 FROM deliveries
 
+
+// Join requests table with deliveries
+
 JOIN requests
 ON deliveries.request_id = requests.request_id
+
+
+// Join food table to get food details
 
 JOIN food
 ON requests.food_id = food.id
 
+
+// Join receiver user information
+
 JOIN users AS receiver
 ON requests.receiver_id = receiver.id
+
+
+// Join delivery staff information
 
 JOIN users AS delivery_user
 ON deliveries.delivery_user_id = delivery_user.id
 
+
+// Show latest deliveries first
+
 ORDER BY deliveries.delivery_id DESC
+
+
+// Limit only latest 5 records
 
 LIMIT 5");
 
 ?>
+
+
 
 <!DOCTYPE html>
 
@@ -117,16 +213,32 @@ LIMIT 5");
 
 <meta charset="UTF-8">
 
+
+<!-- Responsive Design -->
+
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0">
 
+
+<!-- Browser Page Title -->
+
 <title>Admin Dashboard</title>
+
+
+
+<!-- Bootstrap CSS -->
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
 rel="stylesheet">
 
+
+<!-- Font Awesome Icons -->
+
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 rel="stylesheet">
+
+
+<!-- Custom CSS -->
 
 <link href="../css/style.css"
 rel="stylesheet">
@@ -135,59 +247,100 @@ rel="stylesheet">
 
 <body>
 
+
+
+<!-- ======================================================
+TOP NAVIGATION BAR
+Included from external file
+====================================================== -->
+
 <?php include '../includes/navbar.php'; ?>
 
-<!-- SIDEBAR -->
+
+
+<!-- ======================================================
+SIDEBAR MENU
+Admin navigation links
+====================================================== -->
 
 <div class="sidebar">
+
+    <!-- Dashboard -->
 
     <a href="dashboard.php"
     class="nav-link active">
 
         <i class="fas fa-tachometer-alt"></i>
+
         Dashboard
 
     </a>
+
+
+    <!-- Users -->
 
     <a href="users.php"
     class="nav-link">
 
         <i class="fas fa-users"></i>
+
         Users
 
     </a>
+
+
+    <!-- Food Items -->
 
     <a href="food.php"
     class="nav-link">
 
         <i class="fas fa-utensils"></i>
+
         Food Items
 
     </a>
+
+
+    <!-- Requests -->
 
     <a href="requests.php"
     class="nav-link">
 
         <i class="fas fa-inbox"></i>
+
         Requests
 
     </a>
+
+
+    <!-- Deliveries -->
 
     <a href="delivery.php"
     class="nav-link">
 
         <i class="fas fa-truck"></i>
+
         Deliveries
 
     </a>
 
 </div>
 
-<!-- MAIN CONTENT -->
+
+
+
+
+<!-- ======================================================
+MAIN DASHBOARD CONTENT
+====================================================== -->
 
 <div class="main-content">
 
-    <!-- HEADER -->
+
+
+    <!-- ======================================================
+    PAGE HEADER
+    ====================================================== -->
 
     <div class="page-header mb-4">
 
@@ -202,11 +355,22 @@ rel="stylesheet">
 
     </div>
 
-    <!-- SUMMARY CARDS -->
+
+
+
+
+    <!-- ======================================================
+    SUMMARY STATISTICS CARDS
+    Shows all dashboard analytics
+    ====================================================== -->
 
     <div class="row g-4">
 
-        <!-- USERS -->
+
+
+        <!-- ======================================================
+        TOTAL USERS CARD
+        ====================================================== -->
 
         <div class="col-md-3">
 
@@ -220,9 +384,13 @@ rel="stylesheet">
 
                             <h6>Total Users</h6>
 
+                            <!-- Display total users -->
+
                             <h3><?= $total_users ?></h3>
 
                         </div>
+
+                        <!-- Icon -->
 
                         <i class="fas fa-users fa-2x text-primary"></i>
 
@@ -234,7 +402,13 @@ rel="stylesheet">
 
         </div>
 
-        <!-- DONORS -->
+
+
+
+
+        <!-- ======================================================
+        DONORS CARD
+        ====================================================== -->
 
         <div class="col-md-3">
 
@@ -262,7 +436,13 @@ rel="stylesheet">
 
         </div>
 
-        <!-- RECEIVERS -->
+
+
+
+
+        <!-- ======================================================
+        RECEIVERS CARD
+        ====================================================== -->
 
         <div class="col-md-3">
 
@@ -290,7 +470,13 @@ rel="stylesheet">
 
         </div>
 
-        <!-- DELIVERY -->
+
+
+
+
+        <!-- ======================================================
+        DELIVERY STAFF CARD
+        ====================================================== -->
 
         <div class="col-md-3">
 
@@ -318,7 +504,13 @@ rel="stylesheet">
 
         </div>
 
-        <!-- FOOD -->
+
+
+
+
+        <!-- ======================================================
+        FOOD ITEMS CARD
+        ====================================================== -->
 
         <div class="col-md-3">
 
@@ -346,7 +538,13 @@ rel="stylesheet">
 
         </div>
 
-        <!-- PENDING -->
+
+
+
+
+        <!-- ======================================================
+        PENDING REQUESTS CARD
+        ====================================================== -->
 
         <div class="col-md-3">
 
@@ -374,7 +572,13 @@ rel="stylesheet">
 
         </div>
 
-        <!-- ACTIVE DELIVERY -->
+
+
+
+
+        <!-- ======================================================
+        ACTIVE DELIVERIES CARD
+        ====================================================== -->
 
         <div class="col-md-3">
 
@@ -402,7 +606,13 @@ rel="stylesheet">
 
         </div>
 
-        <!-- COMPLETED -->
+
+
+
+
+        <!-- ======================================================
+        COMPLETED DELIVERIES CARD
+        ====================================================== -->
 
         <div class="col-md-3">
 
@@ -432,111 +642,13 @@ rel="stylesheet">
 
     </div>
 
-    <!-- RECENT DELIVERIES -->
 
-    <div class="card mt-5">
 
-        <div class="card-header bg-white">
 
-            <h5 class="mb-0">
 
-                <i class="fas fa-truck me-2"></i>
-
-                Recent Deliveries
-
-            </h5>
-
-        </div>
-
-        <div class="card-body p-0">
-
-            <div class="table-responsive">
-
-                <table class="table table-hover mb-0">
-
-                    <thead>
-
-                    <tr>
-
-                        <th>#</th>
-                        <th>Receiver</th>
-                        <th>Delivery Person</th>
-                        <th>Food</th>
-                        <th>Status</th>
-
-                    </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                    <?php $serial = 1; ?>
-
-                    <?php while($d = mysqli_fetch_assoc($recent_deliveries)): ?>
-
-                    <tr>
-
-                        <td><?= $serial++ ?></td>
-
-                        <td><?= htmlspecialchars($d['receiver_name']) ?></td>
-
-                        <td><?= htmlspecialchars($d['delivery_name']) ?></td>
-
-                        <td><?= htmlspecialchars($d['food_name']) ?></td>
-
-                        <td>
-
-                            <?php
-
-                            if($d['status'] == 'assigned'){
-
-                                echo "<span class='badge bg-primary'>
-                                Assigned
-                                </span>";
-
-                            }elseif($d['status'] == 'picked_up'){
-
-                                echo "<span class='badge bg-warning text-dark'>
-                                Picked Up
-                                </span>";
-
-                            }elseif($d['status'] == 'delivered'){
-
-                                echo "<span class='badge bg-success'>
-                                Delivered
-                                </span>";
-
-                            }elseif($d['status'] == 'cancelled'){
-
-                                echo "<span class='badge bg-danger'>
-                                Cancelled
-                                </span>";
-
-                            }
-
-                            ?>
-
-                        </td>
-
-                    </tr>
-
-                    <?php endwhile; ?>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-    </div>
+    <!-- ======================================================
+    RECENT DELIVERIES TABLE
+    Shows latest delivery activities
+    ====================================================== -->
 
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-</body>
-
-</html>
-```
