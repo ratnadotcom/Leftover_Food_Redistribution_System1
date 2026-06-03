@@ -65,13 +65,8 @@ The **Leftover Food Redistribution System** is a database-driven web application
 
 ### Entity Relationship Summary
 
-```
-Users ──────── Donors ──────── Food_Items
-  │                                  │
-  └────── Receivers ──── Requests ───┘
-                              │
-                          Deliveries
-```
+<img width="724" height="462" alt="image" src="https://github.com/user-attachments/assets/4c16dcbb-78a1-472d-8d2c-2e5f38bd529c" />
+
 
 ### Tables
 
@@ -222,10 +217,22 @@ The `database/leftover_food_complete.sql` file contains:
 > 
 > Example:
 > - Login Page
+<img width="289" height="337" alt="image" src="https://github.com/user-attachments/assets/252376da-dce6-4085-8992-cd4dad843a52" />
+<img width="290" height="306" alt="image" src="https://github.com/user-attachments/assets/f102d0a0-eaf7-4279-b2dc-79dc9203aad2" />
+
+
 > - Admin Dashboard
+<img width="686" height="196" alt="image" src="https://github.com/user-attachments/assets/1c884684-fdbd-4a6e-999a-984ad0e4a25e" />
+
 > - Donor — Add Food
+<img width="385" height="273" alt="image" src="https://github.com/user-attachments/assets/da3572c9-4c29-4680-b7de-fce044215d62" />
+
 > - Receiver — Browse Food
+<img width="446" height="177" alt="image" src="https://github.com/user-attachments/assets/b3ca1a97-db9d-441b-b503-3a8375481018" />
+
 > - Delivery Tracking
+<img width="510" height="153" alt="image" src="https://github.com/user-attachments/assets/2d41187f-95c3-4ee4-b1d3-e909ecff6734" />
+
 
 ---
 
